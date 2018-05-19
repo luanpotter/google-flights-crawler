@@ -9,6 +9,8 @@
   "author": "Luan Nico",
   "license": "MIT",
   "dependencies": {
+    "cartesian-product": "^2.1.2",
+    "moment": "^2.22.1",
     "puppeteer": "^1.4.0"
   }
 }

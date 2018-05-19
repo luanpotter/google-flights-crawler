@@ -15,10 +15,42 @@ class Crawler {
 
     constructor(page) {
         this.page = page;
+        this._fillAmount = 0;
     }
 
     async start() {
         await this.page.goto('https://www.google.com/flights');
+    }
+
+    async search() {
+        await this.page.evaluate(() => document.querySelector('.gws-flights-form__search-button-wrapper floating-action-button').click());
+        await this.page.waitFor('.gws-flights-results__slice-results-desktop ol li');
+        return await this.page.evaluate(async () => {
+            const lis = Array.from(document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li'));
+            const extract = (line, selector) => line.querySelector(selector) ? line.querySelector(selector).textContent.trim() : null;
+            const extractFlights = lis => lis
+                .map(li => li.querySelector('.gws-flights-results__itinerary'))
+                .filter(e => e)
+                .map(line => ({
+                    time: extract(line, '.gws-flights-results__itinerary-times'),
+                    duration: extract(line, '.gws-flights-results__itinerary-duration'),
+                    stops: extract(line, '.gws-flights-results__itinerary-stops'),
+                    price: extract(line, '.gws-flights-results__itinerary-price'),
+                }));
+            const flights = extractFlights(lis);
+            // let i = 0;
+            // for (let flight of flights) {
+            //     console.log(document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li'));
+            //     document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li')[i].querySelector('.gws-flights-results__itinerary').click();
+            //     await new Promise(r => setTimeout(r, 500));
+            //     const children = Array.from(document.querySelectorAll('ol.gws-flights-results__result-list li'));
+            //     flight.children = extractFlights(children);
+            //     document.querySelectorAll('[data-flt-ve=slice_deselect] *').forEach(e => e.click());
+            //     await new Promise(r => setTimeout(r, 500));
+            //     i++;
+            // };
+            return flights;
+        });
     }
 
     async fillDate(order, date) {
@@ -29,8 +61,10 @@ class Crawler {
         await this.page.evaluate(selector => {
             document.querySelector(selector).click();
         }, selector);
+        await new Promise(r => setTimeout(r, 300));
         await this.page.waitFor('#flt-modaldialog date-input input');
-        await this.page.type('#flt-modaldialog date-input input', '2018-07-07');
+        await new Promise(r => setTimeout(r, 300));
+        await this.page.type('#flt-modaldialog date-input input', date);
         await this.page.type('#flt-modaldialog date-input input', String.fromCharCode(13));
         await this.page.click('#flt-modaldialog g-raised-button');
     }
@@ -42,12 +76,17 @@ class Crawler {
         await this.page.evaluate(selector => {
             document.querySelector(`${selector} *`).click();
         }, selector);
-        await this.page.waitFor('#flt-modaldialog input');
-        await this.page.click('#flt-modaldialog input');
-        await this.page.type('#flt-modaldialog input', iata);
+        await this.page.waitFor('#flt-modalunderlay');
+        await new Promise(r => setTimeout(r, 300));
+        await this.page.waitFor('#flt-modaldialog input[type=text]');
+        await this.page.click('#flt-modaldialog input[type=text]');
+        await this.page.evaluate(() => document.querySelector('#flt-modaldialog input[type=text]').value = '');
+        await this.page.type('#flt-modaldialog input[type=text]', iata);
+        await new Promise(r => setTimeout(r, 300));
         await this.page.waitFor('destination-picker [role=listbox] li');
         await this.page.click('#flt-modaldialog input');
         await this.page.type('#flt-modaldialog input', String.fromCharCode(13));
+        this._fillAmount++;
     }
 
     /// Pass in a [FlightTypeEnum] value
