@@ -57,7 +57,8 @@ const tryCrawl = async (logger, crawler, req) => {
     try {
       return await crawl(logger, crawler, req);
     } catch (ex) {
-      logger.log('error: ', ex);
+      logger.log(`error: ${ex}`);
+      logger.log(`${JSON.stringify(ex)}`);
       await new Promise(r => setTimeout(r, 500));
       logger.log('Retrying...');
     }
@@ -107,11 +108,14 @@ const createPool = () => {
 };
 
 (async () => {
+  console.log('Setting up...');
   const pool = createPool();
   const reqs = generate(data);
 
+  console.log(`Generated ${reqs.length} reqs; saving...`);
   await save(`${dir}/inputs`, reqs);
 
+  console.log('Saved. Starting...');
   await Promise.all(reqs.map(async (req, i) => {
     const crawler = await pool.acquire();
     const logger = { log: (str) => console.log(`[thread-${crawler.id}](${i}) ${str}`) };
