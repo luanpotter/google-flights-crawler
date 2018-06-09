@@ -23,12 +23,7 @@ class Crawler {
 
     async start(i = 0) {
         try {
-            await this.page.goto('https://www.google.com/flights'
-            );
-            // , { waitUntil: 'networkidle2' });
-            // await new Promise(r => setTimeout(r, 100));
-            // await this.page.waitFor('[data-flt-ve="country"]');
-            // await this.page.evaluate(() => Array.from(document.querySelectorAll('[data-flt-ve="country"]')).find(e => ['brazil', 'brasil'].indexOf(e.textContent.trim().toLowerCase())  > -1).click());
+            await this.page.goto('https://www.google.com/flights');
         } catch (ex) {
             console.log('Couldn\'t start browser', ex);
             if (i < 4) {
