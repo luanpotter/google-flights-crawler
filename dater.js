@@ -1,1 +1,1 @@
-console.log(require('moment')().format('YYYY-MM-DD-hh:mm:ss'));
+console.log(require('moment')().format('YYYY-MM-DD-hh-mm-ss'));

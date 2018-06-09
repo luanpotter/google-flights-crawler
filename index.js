@@ -1,15 +1,12 @@
 const puppeteer = require('puppeteer');
 const moment = require('moment');
 const product = require('cartesian-product');
+const semaphore = require('semaphore');
 
 const { Crawler, FlightTypeEnum, PassengerTypeEnum } = require('./crawler.js');
+const { save } = require('./storage.js');
 
-const fs = require('fs');
-const { promisify } = require('util');
-
-const writeFile = promisify(fs.writeFile);
-
-const fileName = process.argv[2];
+const dir = process.argv[2];
 const data = JSON.parse(process.argv[3]);
 
 const setup = async (crawler, { startDate, endDate, city1, city2 }) => {
@@ -67,11 +64,7 @@ const tryCrawl = async (crawler, req) => {
   }
 }
 
-(async () => {
-  const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
-  const page = (await browser.pages())[0];
-  const crawler = new Crawler(page);
-
+const generate = data => {
   const firstDate = moment(data.firstDate);
   const lastDate = moment(data.lastDate);
   const { cityPairs } = data;
@@ -82,18 +75,38 @@ const tryCrawl = async (crawler, req) => {
     dates.push(currentDate);
     currentDate = moment(currentDate).add(+1, 'day');
   }
-  
-  const results = [];
   const datePairs = product([dates, dates]).filter(pair => pair[0].isBefore(pair[1]));
+  
+  const reqs = [];
   for (let [ city1, city2] of cityPairs) {
     for (let [ startDate, endDate ] of datePairs) {
       const req = { startDate, endDate, city1, city2 };
-      console.log(`Running for ${JSON.stringify(req)}`);
-      const resp = await tryCrawl(crawler, req);
-      results.push({ req, resp });
+      reqs.push(req);
     }
   }
 
+  return reqs;
+};
+
+(async () => {
+  const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
+  const page = (await browser.pages())[0];
+  const crawler = new Crawler(page);
+
+  const reqs = generate(data);
+  const bandwidth = semaphore(2);
+
+  console.log(`Generated ${reqs.length} requests.`);
+
+  await save(`${dir}/inputs`, reqs);
+
+  await Promise.all(reqs.map((req, i) => async () => {
+    await bandwidth.take();
+    const resp = await tryCrawl(crawler, req);
+    const result = { req, resp };
+    await save(`${dir}/result-${i}`, result);
+    bandwidth.leave();
+  }));
+
   await browser.close();
-  await writeFile(fileName, JSON.stringify(results));
 })();
