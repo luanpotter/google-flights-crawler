@@ -1,11 +1,17 @@
 #!/bin/bash -xe
 
+turnoff=$1
+
 folder=results-`node dater.js`
 mkdir -p $folder
 
 function finish {
     gsutil cp $folder/log gs://crawler-flight-data/$folder/log
     rm -r $folder
+
+    if [ -n "$turnoff" ]; then
+        sudo poweroff
+    fi
 }
 trap finish EXIT
 

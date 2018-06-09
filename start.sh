@@ -1,10 +1,9 @@
 cd "$(dirname "$0")"
 
-touch nohuplog
-echo '------' >> nohuplog
-date >> nohuplog
-echo '------' >> nohuplog
+touch log
 
-./run.sh >> nohuplog
+echo '------' >> log
+date >> log
+echo '------' >> log
 
-echo '------' >> nohuplog
+./run.sh 'turnoff' >> log &

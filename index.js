@@ -89,18 +89,21 @@ const generate = data => {
 };
 
 const createPool = () => {
+  let i = 0;
   const factory = {
     create: async () => {
       const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
       const page = (await browser.pages())[0];
-      return new Crawler(browser, page);
+      const crawler = new Crawler(browser, page);
+      crawler.id = i++;
+      return crawler;
     },
     destroy: async crawler => {
       await crawler.browser.close();
     }
   };
 
-  return Pool.createPool(factory, { max: 10 });
+  return Pool.createPool(factory, { max: 1 });
 };
 
 (async () => {
@@ -111,11 +114,13 @@ const createPool = () => {
 
   await Promise.all(reqs.map(async (req, i) => {
     const crawler = await pool.acquire();
-    const logger = { log: (str) => console.log(`[thread-${i}] ${str}`) };
+    const logger = { log: (str) => console.log(`[thread-${crawler.id}](${i}) ${str}`) };
     logger.log(`Starting ${JSON.stringify(req)}`);
     const resp = await tryCrawl(logger, crawler, req);
     const result = { req, resp };
+    logger.log(`Finished; saving file.`);
     await save(`${dir}/result-${i}`, result);
+    logger.log(`Saved.`);
     pool.release(crawler);
   }));
 

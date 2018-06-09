@@ -9,7 +9,7 @@ const writeFile = promisify(fs.writeFile);
 
 const save = async (path, data) => {
     await writeFile(path, JSON.stringify(data));
-    // await new Promise(r => bucket.upload(path, r));
+    await new Promise(r => bucket.upload(path, r));
 };
 
 module.exports = { save };
