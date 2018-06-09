@@ -6,4 +6,4 @@ echo '------' >> log
 date >> log
 echo '------' >> log
 
-nohup ./run.sh 10 'turnoff' >> log 2>> log &
+nohup ./run.sh 10 'turnoff' >> log 2>> log < /dev/null &
