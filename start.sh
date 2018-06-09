@@ -6,4 +6,4 @@ echo '------' >> log
 date >> log
 echo '------' >> log
 
-./run.sh 'turnoff' >> log &
+./run.sh 10 'turnoff' >> log &

@@ -6,8 +6,9 @@ const Pool = require("generic-pool");
 const { Crawler, FlightTypeEnum, PassengerTypeEnum } = require('./crawler.js');
 const { save } = require('./storage.js');
 
-const dir = process.argv[2];
-const data = JSON.parse(process.argv[3]);
+const dir = process.argv[2]; // directory name to save all the results in
+const threads = parseInt(process.argv[3]); // number of threads to start
+const data = JSON.parse(process.argv[4]); // input data (format: { startDate, endDate, city1, city2 })
 
 const setup = async (crawler, { startDate, endDate, city1, city2 }) => {
   await crawler.start();
@@ -104,11 +105,11 @@ const createPool = () => {
     }
   };
 
-  return Pool.createPool(factory, { max: 1 });
+  return Pool.createPool(factory, { max: threads });
 };
 
 (async () => {
-  console.log('Setting up...');
+  console.log(`Setting up ${threads} threads...`);
   const pool = createPool();
   const reqs = generate(data);
 
