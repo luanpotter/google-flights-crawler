@@ -45,7 +45,7 @@ const crawl = async (crawler, req) => {
       console.log('++ Final entry found!');
       break;
     }
-   
+
     console.log(`++ Follow ${i}/${firstHalfs.length}`);
     const secondHalfs = await crawler.follow(i);
     console.log(`++ Fetch (found ${secondHalfs.length})`);
@@ -68,7 +68,7 @@ const tryCrawl = async (crawler, req) => {
 }
 
 (async () => {
-  const browser = await puppeteer.launch({headless: false, args: ['--no-sandbox']});
+  const browser = await puppeteer.launch({headless: false, args: ['--no-sandbox', '--disable-setuid-sandbox']});
   const page = (await browser.pages())[0];
   const crawler = new Crawler(page);
 
