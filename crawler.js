@@ -27,7 +27,7 @@ class Crawler {
     async search() {
         await this.page.evaluate(() => document.querySelector('.gws-flights-form__search-button-wrapper floating-action-button').click());
         await Promise.all([
-            new Promise(r => setTimeout(r, 2000)),
+            new Promise(r => setTimeout(r, 5000)),
             this.page.waitFor('.gws-flights-results__slice-results-desktop ol li'),
             this.pendingXHR.waitForAllXhrFinished(),
         ]);
@@ -57,7 +57,7 @@ class Crawler {
             return idx > 0;
         });
         await Promise.all([
-            new Promise(r => setTimeout(r, 2000)),
+            new Promise(r => setTimeout(r, 5000)),
             this.pendingXHR.waitForAllXhrFinished(),
         ]);
         const result = await this.page.waitForFunction(() => {
