@@ -23,6 +23,7 @@ class Crawler {
 
     async start() {
         await this.page.goto('https://www.google.com/flights');
+        await this.page.evaluate(() => Array.from(document.querySelectorAll('[data-flt-ve="country"]')).find(e => ['brazil', 'brasil'].indexOf(e.textContent.trim().toLowerCase())  > -1).click());
     }
 
     async search() {

@@ -99,7 +99,7 @@ const createPool = () => {
   let i = 0;
   const factory = {
     create: async () => {
-      const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
+      const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--lang=pt-BR']});
       const page = (await browser.pages())[0];
       const crawler = new Crawler(browser, page);
       crawler.id = i++;
