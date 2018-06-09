@@ -59,12 +59,17 @@ const crawl = async (logger, crawler, req) => {
 };
 
 const tryCrawl = async (logger, crawler, req) => {
+  let i = 0;
   while (true) {
     try {
       return await crawl(logger, crawler, req);
     } catch (ex) {
-      logger.log(`error: ${ex}`);
+      logger.log(`error: ${ex} (this is the ${++i}-th time)`);
       logger.log(`${JSON.stringify(ex)}`);
+      if (i > 10) {
+        logger.log('Just giving up, man...');
+        return 'We gave up after 10 tries...';
+      }
       await new Promise(r => setTimeout(r, 500));
       logger.log('Retrying...');
     }
