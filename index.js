@@ -8,7 +8,12 @@ const { save } = require('./storage.js');
 
 const dir = process.argv[2]; // directory name to save all the results in
 const threads = parseInt(process.argv[3]); // number of threads to start
-const data = JSON.parse(process.argv[4]); // input data (format: { startDate, endDate, city1, city2 })
+
+/// input generator; format:
+/// { firstDate, lastDate, cityPairs })
+/// dates are 'YYYY-MM-DD' and cityPairs is an matrix of nx2 strings representing (3-letter) IATAs
+/// This will crawl every combination of dates between first and last (inclusive), for routes on the cityPairs provided
+const data = JSON.parse(process.argv[4]);
 
 const setup = async (crawler, { startDate, endDate, city1, city2 }) => {
   await crawler.start();
