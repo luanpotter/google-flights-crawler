@@ -9,6 +9,9 @@ const { promisify } = require('util');
 
 const writeFile = promisify(fs.writeFile);
 
+const fileName = process.argv[2];
+const data = JSON.parse(process.argv[3]);
+
 const setup = async (crawler, { startDate, endDate, city1, city2 }) => {
   await crawler.start();
 
@@ -65,16 +68,13 @@ const tryCrawl = async (crawler, req) => {
 }
 
 (async () => {
-  const ts = moment().format('YYYYMMDDhhmmSSS');
-
   const browser = await puppeteer.launch({headless: false, args: ['--no-sandbox']});
   const page = (await browser.pages())[0];
   const crawler = new Crawler(page);
 
-  const firstDate = moment('2019-02-11');
-  const lastDate = moment('2019-02-12');
-
-  const cityPairs = [ ['LON', 'ROM'], ['ROM', 'LON'] ];
+  const firstDate = moment(data.firstDate);
+  const lastDate = moment(data.lastDate);
+  const { cityPairs } = data;
 
   const dates = [];
   let currentDate = moment(firstDate);
@@ -95,5 +95,5 @@ const tryCrawl = async (crawler, req) => {
   }
 
   await browser.close();
-  await writeFile(`results-${ts}`, JSON.stringify(results));
+  await writeFile(fileName, JSON.stringify(results));
 })();

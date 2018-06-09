@@ -164,6 +164,10 @@ pend@~1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/pend/-/pend-1.2.0.tgz#7a57eb550a6783f9115331fcf4663d5c8e007a50"
 
+pending-xhr-puppeteer@^1.0.13:
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/pending-xhr-puppeteer/-/pending-xhr-puppeteer-1.0.13.tgz#d8c19914c89ba1a28f4e0f8db47786cb4cc0984f"
+
 process-nextick-args@~2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/process-nextick-args/-/process-nextick-args-2.0.0.tgz#a37d732f4271b4ab1ad070d35508e8290788ffaa"

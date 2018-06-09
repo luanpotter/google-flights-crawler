@@ -1,3 +1,5 @@
+const { PendingXHR } = require('pending-xhr-puppeteer');
+
 const FlightTypeEnum = Object.freeze({
     ROUND_TRIP: 1,
     ONE_WAY: 2,
@@ -15,7 +17,7 @@ class Crawler {
 
     constructor(page) {
         this.page = page;
-        this._fillAmount = 0;
+        this.pendingXHR = new PendingXHR(this.page);
     }
 
     async start() {
@@ -24,13 +26,15 @@ class Crawler {
 
     async search() {
         await this.page.evaluate(() => document.querySelector('.gws-flights-form__search-button-wrapper floating-action-button').click());
-        await new Promise(r => setTimeout(r, 250));
-        await this.page.waitFor('.gws-flights-results__slice-results-desktop ol li');
-        await new Promise(r => setTimeout(r, 500));
+        await Promise.all([
+            new Promise(r => setTimeout(r, 2000)),
+            this.page.waitFor('.gws-flights-results__slice-results-desktop ol li'),
+            this.pendingXHR.waitForAllXhrFinished(),
+        ]);
         return await this.page.evaluate(async () => {
             const extract = (line, selector) => line.querySelector(selector) ? line.querySelector(selector).textContent.trim() : null;
             const extractFlights = lis => lis
-                .map(li => li.querySelector('.gws-flights-results__itinerary'))
+                .map(li => li.querySelector('.gws-flights-results__itinerary.gws-flights-results__collapsed-itinerary'))
                 .filter(e => e)
                 .map(line => ({
                     time: extract(line, '.gws-flights-results__itinerary-times'),
@@ -45,18 +49,33 @@ class Crawler {
     }
 
     async follow(index) {
-        await this.page.waitForFunction(`document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li .gws-flights-results__itinerary').length > ${index}`);
-        await this.page.evaluate(index => document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li .gws-flights-results__itinerary')[index].click(), index);
+        await this.page.waitForFunction(`document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li .gws-flights-results__itinerary.gws-flights-results__collapsed-itinerary').length > ${index}`);
+        await this.page.evaluate(index => document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li .gws-flights-results__itinerary.gws-flights-results__collapsed-itinerary')[index].click(), index);
         await this.page.waitForFunction(() => {
             const ol = document.querySelectorAll('.gws-flights__selection-bar.gws-flights__scrollbar-padding ol.gws-flights-results__breadcrumbs.gws-flights__flex-box.gws-flights__align-center')[0];
             const idx = Array.from(ol.querySelectorAll('li')).findIndex(el => el.classList.contains('gws-flights-results__breadcrumb-active'));
             return idx > 0;
         });
-        await this.page.waitFor('ol.gws-flights-results__result-list li');
+        await Promise.all([
+            new Promise(r => setTimeout(r, 2000)),
+            this.pendingXHR.waitForAllXhrFinished(),
+        ]);
+        const result = await this.page.waitForFunction(() => {
+            if (document.querySelectorAll('ol.gws-flights-results__result-list li').length > 0) {
+                return 1;
+            }
+            if (document.querySelectorAll('[data-flt-ve="no_results"]').length > 0) {
+                return -1;
+            }
+            return false;
+        });
+        if (result === -1) {
+            return []; // empty result
+        }
         return await this.page.evaluate(() => {
             const extract = (line, selector) => line.querySelector(selector) ? line.querySelector(selector).textContent.trim() : null;
             const extractFlights = lis => lis
-                .map(li => li.querySelector('.gws-flights-results__itinerary'))
+                .map(li => li.querySelector('.gws-flights-results__itinerary.gws-flights-results__collapsed-itinerary'))
                 .filter(e => e)
                 .map(line => ({
                     time: extract(line, '.gws-flights-results__itinerary-times'),
@@ -103,7 +122,6 @@ class Crawler {
         await this.page.waitFor('destination-picker [role=listbox] li');
         await this.page.click('#flt-modaldialog input');
         await this.page.type('#flt-modaldialog input', String.fromCharCode(13));
-        this._fillAmount++;
     }
 
     /// Pass in a [FlightTypeEnum] value
