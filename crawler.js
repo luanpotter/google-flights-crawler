@@ -24,9 +24,10 @@ class Crawler {
 
     async search() {
         await this.page.evaluate(() => document.querySelector('.gws-flights-form__search-button-wrapper floating-action-button').click());
+        await new Promise(r => setTimeout(r, 250));
         await this.page.waitFor('.gws-flights-results__slice-results-desktop ol li');
+        await new Promise(r => setTimeout(r, 500));
         return await this.page.evaluate(async () => {
-            const lis = Array.from(document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li'));
             const extract = (line, selector) => line.querySelector(selector) ? line.querySelector(selector).textContent.trim() : null;
             const extractFlights = lis => lis
                 .map(li => li.querySelector('.gws-flights-results__itinerary'))
@@ -37,19 +38,35 @@ class Crawler {
                     stops: extract(line, '.gws-flights-results__itinerary-stops'),
                     price: extract(line, '.gws-flights-results__itinerary-price'),
                 }));
-            const flights = extractFlights(lis);
-            // let i = 0;
-            // for (let flight of flights) {
-            //     console.log(document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li'));
-            //     document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li')[i].querySelector('.gws-flights-results__itinerary').click();
-            //     await new Promise(r => setTimeout(r, 500));
-            //     const children = Array.from(document.querySelectorAll('ol.gws-flights-results__result-list li'));
-            //     flight.children = extractFlights(children);
-            //     document.querySelectorAll('[data-flt-ve=slice_deselect] *').forEach(e => e.click());
-            //     await new Promise(r => setTimeout(r, 500));
-            //     i++;
-            // };
-            return flights;
+
+            const lis = Array.from(document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li'));
+            return extractFlights(lis);
+        });
+    }
+
+    async follow(index) {
+        await this.page.waitForFunction(`document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li .gws-flights-results__itinerary').length > ${index}`);
+        await this.page.evaluate(index => document.querySelectorAll('.gws-flights-results__slice-results-desktop ol li .gws-flights-results__itinerary')[index].click(), index);
+        await this.page.waitForFunction(() => {
+            const ol = document.querySelectorAll('.gws-flights__selection-bar.gws-flights__scrollbar-padding ol.gws-flights-results__breadcrumbs.gws-flights__flex-box.gws-flights__align-center')[0];
+            const idx = Array.from(ol.querySelectorAll('li')).findIndex(el => el.classList.contains('gws-flights-results__breadcrumb-active'));
+            return idx > 0;
+        });
+        await this.page.waitFor('ol.gws-flights-results__result-list li');
+        return await this.page.evaluate(() => {
+            const extract = (line, selector) => line.querySelector(selector) ? line.querySelector(selector).textContent.trim() : null;
+            const extractFlights = lis => lis
+                .map(li => li.querySelector('.gws-flights-results__itinerary'))
+                .filter(e => e)
+                .map(line => ({
+                    time: extract(line, '.gws-flights-results__itinerary-times'),
+                    duration: extract(line, '.gws-flights-results__itinerary-duration'),
+                    stops: extract(line, '.gws-flights-results__itinerary-stops'),
+                    price: extract(line, '.gws-flights-results__itinerary-price'),
+                }));
+
+            const children = Array.from(document.querySelectorAll('ol.gws-flights-results__result-list li'));
+            return extractFlights(children);
         });
     }
 
@@ -103,7 +120,7 @@ class Crawler {
             const desiredAmount = countMap[type] || 0;
             const currentAmount = await this.page.evaluate(type => document.querySelector(`.gws-flights-dialog__passenger-dialog > div > div:nth-child(${type}) .gws-flights-dialog__flipper-value`).textContent, type);
 
-            const buttonSelect = action => `.gws-flights-dialog__passenger-dialog > div > div:nth-child(${type}) [role=region] > div:nth-child(${action})`;
+            const buttonSelect = action => `.gws-flights-dialog__passenger-dialog > div > div:nth-child(${type}) [role=presentation] > div:nth-child(${action})`;
             if (currentAmount < desiredAmount) {
                 const increaseButton = buttonSelect(3);
                 for (let i = 0; i < (desiredAmount - currentAmount); i++) {
