@@ -65,7 +65,7 @@ const tryCrawl = async (logger, crawler, req) => {
       return await crawl(logger, crawler, req);
     } catch (ex) {
       logger.log(`error: ${ex} (this is the ${++i}-th time)`);
-      logger.log(`${JSON.stringify(ex)}`);
+      console.log(ex);
       if (i > 10) {
         logger.log('Just giving up, man...');
         return 'We gave up after 10 tries...';
