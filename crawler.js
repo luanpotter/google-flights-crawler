@@ -15,7 +15,8 @@ const PassengerTypeEnum = Object.freeze({
 
 class Crawler {
 
-    constructor(page) {
+    constructor(browser, page) {
+        this.browser = browser;
         this.page = page;
         this.pendingXHR = new PendingXHR(this.page);
     }

@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 const moment = require('moment');
 const product = require('cartesian-product');
-const semaphore = require('semaphore');
+const Pool = require("generic-pool");
 
 const { Crawler, FlightTypeEnum, PassengerTypeEnum } = require('./crawler.js');
 const { save } = require('./storage.js');
@@ -25,41 +25,41 @@ const setup = async (crawler, { startDate, endDate, city1, city2 }) => {
   await crawler.fillDate(2, endDate.format('YYYY-MM-DD'));
 }
 
-const crawl = async (crawler, req) => {
+const crawl = async (logger, crawler, req) => {
   const results = [];
 
   for (let i = 1; ; i++) {
-    console.log(`+ Following ${i}`);
+    logger.log(`+ Following ${i}`);
 
-    console.log('++ Setup');
+    logger.log('++ Setup');
     await setup(crawler, req);
 
-    console.log('++ Search');
+    logger.log('++ Search');
     const firstHalfs = await crawler.search();
 
     const firstHalf = firstHalfs[i];
     if (!firstHalf) {
-      console.log('++ Final entry found!');
+      logger.log('++ Final entry found!');
       break;
     }
 
-    console.log(`++ Follow ${i}/${firstHalfs.length}`);
+    logger.log(`++ Follow ${i}/${firstHalfs.length}`);
     const secondHalfs = await crawler.follow(i);
-    console.log(`++ Fetch (found ${secondHalfs.length})`);
+    logger.log(`++ Fetch (found ${secondHalfs.length})`);
     secondHalfs.forEach(secondHalf => results.push({ firstHalf, secondHalf }));
   }
 
   return results;
 };
 
-const tryCrawl = async (crawler, req) => {
+const tryCrawl = async (logger, crawler, req) => {
   while (true) {
     try {
-      return await crawl(crawler, req);
+      return await crawl(logger, crawler, req);
     } catch (ex) {
-      console.log('error: ', ex);
+      logger.log('error: ', ex);
       await new Promise(r => setTimeout(r, 500));
-      console.log('Retrying...');
+      logger.log('Retrying...');
     }
   }
 }
@@ -88,25 +88,37 @@ const generate = data => {
   return reqs;
 };
 
+const createPool = () => {
+  const factory = {
+    create: async () => {
+      const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
+      const page = (await browser.pages())[0];
+      return new Crawler(browser, page);
+    },
+    destroy: async crawler => {
+      await crawler.browser.close();
+    }
+  };
+
+  return Pool.createPool(factory, { max: 10 });
+};
+
 (async () => {
-  const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
-  const page = (await browser.pages())[0];
-  const crawler = new Crawler(page);
-
+  const pool = createPool();
   const reqs = generate(data);
-  const bandwidth = semaphore(2);
-
-  console.log(`Generated ${reqs.length} requests.`);
 
   await save(`${dir}/inputs`, reqs);
 
-  await Promise.all(reqs.map((req, i) => async () => {
-    await bandwidth.take();
-    const resp = await tryCrawl(crawler, req);
+  await Promise.all(reqs.map(async (req, i) => {
+    const crawler = await pool.acquire();
+    const logger = { log: (str) => console.log(`[thread-${i}] ${str}`) };
+    logger.log(`Starting ${JSON.stringify(req)}`);
+    const resp = await tryCrawl(logger, crawler, req);
     const result = { req, resp };
     await save(`${dir}/result-${i}`, result);
-    bandwidth.leave();
+    pool.release(crawler);
   }));
 
-  await browser.close();
+  await pool.drain();
+  await pool.clear();
 })();
